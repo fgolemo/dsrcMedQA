@@ -29,14 +29,21 @@ def fillMatrix(keys, hashes, filename):
 	keyDict = dict(zip(keys, range(keyslen)))
 	matrix = sparse.dok_matrix((keyslen,keyslen), dtype=uint8)
 	connList = []
+	errors = 0
 	for y in range(hasheslen):
 		oldProgress = printProgress(y, hasheslen, oldProgress)
 		# val = r.get(hashes[y])
 		keys = hashes[y].split(' ')
-		m,n = keyDict[keys[0]], keyDict[keys[1]]
-		strength = r.get(hashes[y])
-		connList.append([m,n,strength])
-		matrix[m,n] = strength
+		if (len(keys) == 2):
+			m,n = keyDict[keys[0]], keyDict[keys[1]]
+			strength = r.get(hashes[y])
+			connList.append([m,n,strength])
+			matrix[m,n] = strength
+		else:
+			errors += 1
+			print("\nfound error, skipping:")
+			print(keys)
+	print("total errors: " + str(errors))
 	print("finished filling... now writing")
 	sys.stdout.flush()
 	io.savemat(filename + '.connMatrix', matrix, appendmat=True, format='5', do_compression=True)
@@ -53,16 +60,16 @@ def writeOutput():
 	keyString = r.get('dq2cm-keys-unique'+str(i))
 	while (keyString != None and keyString != ""):
 		print("found keys with index "+str(i))
-		keys += uniquify(r.get('dq2cm-keys-unique'+str(i)).split(' '))
-		if (i == 1):
-			keys.pop(0)
-		hashes += uniquify(r.get('dq2cm-keys'+str(i)).split(',,'))
-		if (i == 1):
-			hashes.pop(0)
+		keysTemp = uniquify(r.get('dq2cm-keys-unique'+str(i)).split(' '))
+		keysTemp.sort()
+		keysTemp.pop(0)
+		keys += keysTemp
+		hashesTemp = uniquify(r.get('dq2cm-keys'+str(i)).split(',,'))
+		hashesTemp.sort()
+		hashesTemp.pop(0)
+		hashes += hashesTemp
 		i+=1
 		keyString = r.get('dq2cm-keys-unique'+str(i))
-	keys.sort()
-	hashes.sort()
 	print("got a total of "+str(len(keys)) + " keys")
 	filename = str(sys.argv[1])
 	W = fillMatrix(keys, hashes, filename)
