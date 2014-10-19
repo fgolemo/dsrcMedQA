@@ -64,7 +64,7 @@ def writeOutput():
 		keysTemp.sort()
 		keysTemp.pop(0)
 		keys += keysTemp
-		hashesTemp = uniquify(r.get('dq2cm-keys'+str(i)).split(',,'))
+		hashesTemp = uniquify(r.get('dq2cm-keys'+str(i)).split('\%\%\%'))
 		hashesTemp.sort()
 		hashesTemp.pop(0)
 		hashes += hashesTemp

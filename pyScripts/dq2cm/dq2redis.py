@@ -82,7 +82,7 @@ class NQtoRedis():
 								self.r.incr('dq2cm-keysIndices')
 								print("\nredis key store is full, increasing index: "+str(lastKeyStoreIndex))
 
-						self.r.append('dq2cm-keys'+str(lastKeyStoreIndex),",,"+key)
+						self.r.append('dq2cm-keys'+str(lastKeyStoreIndex),'\%\%\%'+key)
 						self.r.append('dq2cm-keys-unique'+str(lastKeyStoreIndex)," "+key)
 				i += 1
 				# if (i == 10000):
