@@ -47,12 +47,23 @@ def fillMatrix(keys, hashes, filename):
 
 
 def writeOutput():
-	keys = uniquify(r.get('dq2cm-keys-unique').split(' '))
+	i = 1
+	keys = []
+	hashes = []
+	keyString = r.get('dq2cm-keys-unique'+str(i))
+	while (keyString != None and keyString != ""):
+		print("found keys with index "+str(i))
+		keys += uniquify(r.get('dq2cm-keys-unique'+str(i)).split(' '))
+		if (i == 1):
+			keys.pop(0)
+		hashes += uniquify(r.get('dq2cm-keys'+str(i)).split(',,'))
+		if (i == 1):
+			hashes.pop(0)
+		i+=1
+		keyString = r.get('dq2cm-keys-unique'+str(i))
 	keys.sort()
-	keys.pop(0)
-	hashes = uniquify(r.get('dq2cm-keys').split(',,'))
 	hashes.sort()
-	hashes.pop(0)
+	print("got a total of "+str(len(keys)) + " keys")
 	filename = str(sys.argv[1])
 	W = fillMatrix(keys, hashes, filename)
 	print('Finished writing MAT file. Now check the output at: ' + filename)
