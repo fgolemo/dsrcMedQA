@@ -2,10 +2,7 @@ import requests
 from pprint import *
 import cPickle as pickle
 import numpy as np
-import csv
 import json
-import nltk
-import string
 
 def annotate_question(text, mc, confidence=0.2, support=20):
 	"""
@@ -86,10 +83,12 @@ if __name__ == '__main__':
 
 
 	raw_questions =  pickle.load(open('selected_question_objects.p', 'rb'))
-	questions = raw_questions[0:2] ## IMPORTANT!!! CHANGE '2'
+	questions = raw_questions ## IMPORTANT!!! CHANGE '2'
 	annotated_questions = [];
 
+	i=0;
 	for q in questions:
+
 		try:
 			annotation = uri_annotation( annotate_question(q['qtext'], q['mc']) )
 			
@@ -104,7 +103,13 @@ if __name__ == '__main__':
 		except:
 			continue
 
-	pickle.dump(annotated_questions, open('annotated_questions.p', 'w'))	
+		if i % 20 == 0:
+			pickle.dump(annotated_questions, open('annotated_questions_'+str(i)+'.p', 'w'))	
+
+
+		i += 1
+
+	pickle.dump(annotated_questions, open('annotated_questions_final.p', 'w'))	
 
 
 
