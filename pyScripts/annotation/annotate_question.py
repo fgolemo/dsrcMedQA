@@ -120,11 +120,17 @@ class AnnotateQuestion():
 		fp = len( A - MA ) + .0 # False positives
 		fn = len( MA - A ) + .0 # False negatives
 
-		precision = tp / (tp + fp)
-		recall = tp / (tp + fn)
+		if tp+fp == 0:
+			return 'tp+fp=0'
 
-		# Return F1 measure
-		return (2.0 * precision * recall) / (precision + recall)
+		elif tp+fn == 0:
+			return 'tp+fn=0'
+
+		else:
+			# No devision by zero, return F1 measure
+			precision = tp / (tp + fp)
+			recall = tp / (tp + fn)
+			return (2.0 * precision * recall) / (precision + recall)
 
 
 	def optimize_parameters(self, man_ann_questions, confValues=[.2], suppValues=[20], progress=False):
