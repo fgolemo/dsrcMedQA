@@ -3,6 +3,7 @@ from pprint import *
 import cPickle as pickle
 import numpy as np
 import json
+from repo.pyScripts.progress import ProgressBar
 
 class AnnotateQuestion():
 
@@ -126,17 +127,21 @@ class AnnotateQuestion():
 		return (2.0 * precision * recall) / (precision + recall)
 
 
-	def optimize_parameters(self, man_ann_questions, confValues=[.2], suppValues=[20]):
+	def optimize_parameters(self, man_ann_questions, confValues=[.2], suppValues=[20], progress=False):
 		"""
 		Determines good parameters for the spotlight annotation
 		"""
+		if progress:
+			p = ProgressBar(len(man_ann_questions)*len(confValues)*len(suppValues))
+			i = 0
+
 		results = []
 		for confidence in confValues:
 			for support in suppValues:
 				for q in man_ann_questions:
 					
 					spotlight_ann = self.annotate_question(q['qtext'], q['mc'], confidence, support)
-					spotlight_ann = self.extract_uris(spotlight_ann, False) # REMOVE FALSE!
+					spotlight_ann = self.extract_uris(spotlight_ann) # REMOVE FALSE!
 					spotlight_ann = self.flatten(spotlight_ann)
 					manual_ann = q['q_entities'] + self.flatten(q['mc_entities'])
 
@@ -148,6 +153,10 @@ class AnnotateQuestion():
 						'QID': q['QID'],
 						'spotlight_ann': spotlight_ann
 					})
+
+					if progress:
+						p.animate(i)
+						i += 1
 		return results
 
 	def flatten(self, myList):
