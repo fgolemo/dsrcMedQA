@@ -112,6 +112,9 @@ class AnnotateQuestion():
 		to a certain manual annotation
 		"""
 		
+		if len(manual_ann) == 0 or len(spotlight_ann) == 0:
+			return 'empty annotation'
+
 		# Note: we also remove duplicates!
 		MA = set(manual_ann) 
 		A = set(spotlight_ann)
@@ -120,16 +123,13 @@ class AnnotateQuestion():
 		fp = len( A - MA ) + .0 # False positives
 		fn = len( MA - A ) + .0 # False negatives
 
-		if tp+fp == 0:
-			return 'tp+fp=0'
+		# Always defined when A and MA nonempty
+		precision = tp / (tp + fp)
+		recall = tp / (tp + fn)
 
-		elif tp+fn == 0:
-			return 'tp+fn=0'
-
+		if precision+recall == 0:
+			return 'NaN'
 		else:
-			# No devision by zero, return F1 measure
-			precision = tp / (tp + fp)
-			recall = tp / (tp + fn)
 			return (2.0 * precision * recall) / (precision + recall)
 
 
