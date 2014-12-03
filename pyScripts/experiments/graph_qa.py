@@ -8,9 +8,12 @@ class QAException(Exception):
     pass
 
 
-def find_vertex_index(graph, uri_str):
+def find_vertex_index(graph, uri_str, brackets=False):
 	"""Finds the index of a vertex based on the uri attribute
 	"""
+	if brackets:
+		uri_str = '<'+uri_str+'>'
+
 	try:
 		return graph.vs.find(uri=uri_str).index
 	except:
@@ -39,7 +42,7 @@ def average_qa_distance(distances):
 	return np.average(np.median(distances,axis=0))
 
 
-def rank_qa(graph, question1, answers1, method='deg_weight', qa_dist_fn = average_qa_distance):
+def rank_qa(graph, question1, answers1, method='deg_weight', qa_dist_fn = average_qa_distance, brackets=False):
 	"""Ranks MC answers given as a list of uri's
 
 	Args:
@@ -62,14 +65,14 @@ def rank_qa(graph, question1, answers1, method='deg_weight', qa_dist_fn = averag
 		qa_dist_fn = average_qa_distance
 
 	# Replace uri's by indices and remove unrepresented & duplicate entities
-	question = [find_vertex_index(graph,q) for q in question]
+	question = [find_vertex_index(graph,q,brackets) for q in question]
 	question = list(set([q for q in question if q is not None]))
     
 	if not question:
 		raise QAException("None of the entities in the question can be found in the graph.")
 
 	for i,ans in enumerate(answers):
-		ans = [find_vertex_index(graph,entity) for entity in ans]
+		ans = [find_vertex_index(graph,entity,brackets) for entity in ans]
 		ans = [entity for entity in ans if entity is not None]
 		answers[i]=ans
     

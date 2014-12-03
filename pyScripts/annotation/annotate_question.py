@@ -4,75 +4,88 @@ import cPickle as pickle
 import numpy as np
 import json
 
-def annotate_question(text, mc, confidence=0.2, support=20):
-	"""
-	Annotates question and mc text with DBPedia entities using dbpedia spotlight
+class AnnotateQuestion():
 
-	See also github.com/dbpedia-spotlight/
-	"""
-	uri = "http://spotlight.dbpedia.org/rest/annotate/"
+	def annotate_question(self, text, mc, confidence=0.2, support=20):
+		"""
+		Annotates question and mc text with DBPedia entities using dbpedia spotlight
 
-	sep = ' aaaaaaaa '
-	data = {
-		'text': text + sep + sep.join(mc),
-		'confidence': confidence,
-		'support': support
-	}
-	headers = {'Accept': 'application/json'}
+		See also github.com/dbpedia-spotlight/
+		"""
+		uri = "http://spotlight.dbpedia.org/rest/annotate/"
 
-	r = requests.get(uri, params=data, headers=headers)
-	annotation = r.json()
+		sep = ' aaaaaaaa '
+		data = {
+			'text': text + sep + sep.join(mc),
+			'confidence': confidence,
+			'support': support
+		}
+		headers = {'Accept': 'application/json'}
 
-	# pickle.dump(annotation, open('annotation.p', 'w'))
-	# annotation = pickle.load(open('annotation.p', 'rb'))
+		r = requests.get(uri, params=data, headers=headers)
+		annotation = r.json()
 
-	# Check annotation
-	if 'Resources' not in annotation:
-		return [[] for i in range(len(mc)+1)]
+		# pickle.dump(annotation, open('annotation.p', 'w'))
+		# annotation = pickle.load(open('annotation.p', 'rb'))
 
-	# List with position of each part (text, mc1, mc2, mc3,... )
-	# in the joined string.
-	part_pos = np.insert(map(len, mc), 0, len(text)) 
-	part_pos = part_pos + (np.ones(len(part_pos)) * len(sep))
-	part_pos = np.cumsum(part_pos)
+		# Check annotation
+		if 'Resources' not in annotation:
+			return [[] for i in range(len(mc)+1)]
 
-	partition = {}
-	i = 0
-	for entity in annotation['Resources']:
-		pos = int(entity['@offset'])
+		# List with position of each part (text, mc1, mc2, mc3,... )
+		# in the joined string.
+		part_pos = np.insert(map(len, mc), 0, len(text)) 
+		part_pos = part_pos + (np.ones(len(part_pos)) * len(sep))
+		part_pos = np.cumsum(part_pos)
 
-		if pos >= part_pos[i]:	
-			# Not in part[i], increase i untill part_pos[i] <= pos < part_pos[i+1]
-			i += 1 
-			while pos >= part_pos[i]:
+		partition = {}
+		i = 0
+		for entity in annotation['Resources']:
+			pos = int(entity['@offset'])
+
+			if pos >= part_pos[i]:	
+				# Not in part[i], increase i untill part_pos[i] <= pos < part_pos[i+1]
 				i += 1 
-				partition[i] = []
+				while pos >= part_pos[i]:
+					i += 1 
+					partition[i] = []
 
-		if (i not in partition):# or (partition[i] == None) :
-		 	partition[i] = []
-		partition[i].append(entity)
+			if (i not in partition):# or (partition[i] == None) :
+			 	partition[i] = []
+			partition[i].append(entity)
 
-	return [v for k,v in partition.iteritems()]
-
-
-def uri_annotation(annotation):
-	"""
-	Replaces annotations by uri's
-	"""
-
-	output = []
-	for part in annotation:
-		if part != []: 
-			output.append( map(lambda x: x['@URI'], part) )
-	return output
+		return [v for k,v in partition.iteritems()]
 
 
-def main():
-	text = "President Obama called Wednesday on Congress to extend a tax break USA"
-	mc = ['USA has New York as a city', 'Holland not', 'I like Riemann', 'Yeah', 'Avjacie', 'ackeianc', 'Why Cauchy did not invent the lambda calculus']
+	def uri_annotation(self, annotation):
+		"""
+		Replaces annotations by uri's
+		"""
 
-	r = annotate_question(text,mc,.15,50)
-	print uri_annotation(r)
+		output = []
+		for part in annotation:
+			if part != []: 
+				output.append( map(lambda x: self.get_real_uri(x['@URI']), part) )
+		return output
+
+
+	def read_pickles(self):
+		self.redirect_list =  pickle.load(open('redirects_transitive_en.nt.redirectList.p', 'rb'))
+		self.redirect_dict =  pickle.load(open('redirects_transitive_en.nt.redirectDict.p', 'rb'))
+
+	def get_real_uri(self, uri):
+		if uri in self.redirect_list:
+			return self.redirect_dict[uri]
+		else:
+			return uri
+
+
+	def main(self):
+		text = "President Obama called Wednesday on Congress to extend a tax break USA"
+		mc = ['USA has New York as a city', 'Holland not', 'I like Riemann', 'Yeah', 'Avjacie', 'ackeianc', 'Why Cauchy did not invent the lambda calculus']
+
+		r = self.annotate_question(text,mc,.15,50)
+		print self.uri_annotation(r)
 
 
 
@@ -81,6 +94,7 @@ if __name__ == '__main__':
 	Annotates the question in selected_question_objects.p
 	"""
 
+	a = AnnotateQuestion()
 
 	raw_questions =  pickle.load(open('selected_question_objects.p', 'rb'))
 	questions = raw_questions ## IMPORTANT!!! CHANGE '2'
@@ -90,7 +104,7 @@ if __name__ == '__main__':
 	for q in questions:
 
 		try:
-			annotation = uri_annotation( annotate_question(q['qtext'], q['mc']) )
+			annotation = a.uri_annotation( a.annotate_question(q['qtext'], q['mc']) )
 			
 			# pickle.dump(annotation, open('annotation.p', 'w'))
 			# annotation = pickle.load(open('annotation.p', 'rb'))
