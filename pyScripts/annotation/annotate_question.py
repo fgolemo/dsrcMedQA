@@ -6,27 +6,38 @@ import json
 
 class AnnotateQuestion():
 
-	def annotate_question(self, text, mc, confidence=0.2, support=20):
-		"""
-		Annotates question and mc text with DBPedia entities using dbpedia spotlight
+	# Class variables
+	redirect_list_file = 'redirects_transitive_en.nt.redirectList.p'
+	redirect_dict_file = 'redirects_transitive_en.nt.redirectDict.p'
+	spotlight_uri = 'http://spotlight.sztaki.hu:2222/rest/annotate'
+	question_part_separator = ' aaaaaaaa '
 
-		See also github.com/dbpedia-spotlight/
+	def annotate_text(self, text, confidence=0.2, support=20):
 		"""
-		uri = "http://spotlight.dbpedia.org/rest/annotate/"
-
-		sep = ' aaaaaaaa '
+		Annotates text using DBPedia Spotlight
+		"""
 		data = {
-			'text': text + sep + sep.join(mc),
+			'text': text,
 			'confidence': confidence,
 			'support': support
 		}
 		headers = {'Accept': 'application/json'}
 
-		r = requests.get(uri, params=data, headers=headers)
-		annotation = r.json()
+		r = requests.get(self.spotlight_uri, params=data, headers=headers)
+		return r.json()
 
-		# pickle.dump(annotation, open('annotation.p', 'w'))
-		# annotation = pickle.load(open('annotation.p', 'rb'))
+
+	def annotate_question(self, text, mc, confidence=0.2, support=20):
+		"""
+		Annotates question and mc's at once using DPpedia Spotlight
+
+		The question text and all mc's are combined in one string
+		which is annotated. The recognized entities are returned
+		afterwards splitting them in their respective parts.
+		"""
+
+		sep = self.question_part_separator
+		annotation =  self.annotate_text( text+sep+sep.join(mc), confidence, support)
 
 		# Check annotation
 		if 'Resources' not in annotation:
@@ -57,43 +68,109 @@ class AnnotateQuestion():
 		return [v for k,v in partition.iteritems()]
 
 
-	def uri_annotation(self, annotation):
+	def extract_uris(self, annotation, redirect=True):
 		"""
-		Replaces annotations by uri's
+		Replaces annotations by uri's and removes duplicates
+
+		When redirect=True, the uri's are moreover replaced by
+		possible redirects. Otherwise, the uri's from the 
+		annotation are returned.
 		"""
 
 		output = []
 		for part in annotation:
 			if part != []: 
-				output.append( map(lambda x: self.get_real_uri(x['@URI']), part) )
+				part_uris = ['<'+x['@URI']+'>' for x in part]
+				if redirect:
+					part_uris = map(self.follow_uri_redirect, part_uris)
+				output.append(list(set(part_uris)))
 		return output
 
 
-	def read_pickles(self):
-		self.redirect_list =  pickle.load(open('redirects_transitive_en.nt.redirectList.p', 'rb'))
-		self.redirect_dict =  pickle.load(open('redirects_transitive_en.nt.redirectDict.p', 'rb'))
+	def load_redirects(self):
+		"""
+		Loads the redirection lists & dictionaries
+		"""
+		self.redirect_list =  pickle.load(open(self.redirect_list_file, 'rb'))
+		self.redirect_dict =  pickle.load(open(self.redirect_dict_file, 'rb'))
 
-	def get_real_uri(self, uri):
+
+	def follow_uri_redirect(self, uri):
+		"""
+		Returns the 'real' uri, following possible redirects. 
+		"""
 		if uri in self.redirect_list:
 			return self.redirect_dict[uri]
 		else:
 			return uri
 
 
-	def main(self):
-		text = "President Obama called Wednesday on Congress to extend a tax break USA"
-		mc = ['USA has New York as a city', 'Holland not', 'I like Riemann', 'Yeah', 'Avjacie', 'ackeianc', 'Why Cauchy did not invent the lambda calculus']
+	def F1_measure(self, manual_ann, spotlight_ann):
+		"""
+		Calculates F1 measure for an annotation with respect
+		to a certain manual annotation
+		"""
+		
+		# Note: we also remove duplicates!
+		MA = set(manual_ann) 
+		A = set(spotlight_ann)
 
-		r = self.annotate_question(text,mc,.15,50)
-		print self.uri_annotation(r)
+		tp = len( A & MA ) + .0 # True  positives
+		fp = len( A - MA ) + .0 # False positives
+		fn = len( MA - A ) + .0 # False negatives
+
+		precision = tp / (tp + fp)
+		recall = tp / (tp + fn)
+
+		# Return F1 measure
+		return (2.0 * precision * recall) / (precision + recall)
+
+
+	def optimize_parameters(self, man_ann_questions, confValues=[.2], suppValues=[20]):
+		"""
+		Determines good parameters for the spotlight annotation
+		"""
+		results = []
+		for confidence in confValues:
+			for support in suppValues:
+				for q in man_ann_questions:
+					
+					spotlight_ann = self.annotate_question(q['qtext'], q['mc'], confidence, support)
+					spotlight_ann = self.extract_uris(spotlight_ann, False) # REMOVE FALSE!
+					spotlight_ann = self.flatten(spotlight_ann)
+					manual_ann = q['q_entities'] + self.flatten(q['mc_entities'])
+
+					F1 = self.F1_measure(manual_ann, spotlight_ann)
+					results.append({
+						'confidence': confidence,
+						'support': support,
+						'F1': F1,
+						'QID': q['QID'],
+						'spotlight_ann': spotlight_ann
+					})
+		return results
+
+	def flatten(self, myList):
+		"""
+		Flattens a two dimensional list.
+		"""
+		return [item for subList in myList for item in subList ]
+
+
+	# Old functions
+	get_real_uri = follow_uri_redirect
+	uri_annotation = extract_uris
+	read_pickles = load_redirects
 
 
 
 if __name__ == '__main__':
+
 	"""
 	Annotates the question in selected_question_objects.p
 	"""
 
+	"""
 	a = AnnotateQuestion()
 
 	raw_questions =  pickle.load(open('selected_question_objects.p', 'rb'))
@@ -124,6 +201,7 @@ if __name__ == '__main__':
 		i += 1
 
 	pickle.dump(annotated_questions, open('annotated_questions_final.p', 'w'))	
+	"""
 
 
 
