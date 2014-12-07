@@ -105,13 +105,24 @@ class AnnotateQuestion():
 		else:
 			return uri
 
+	def ad_hoc_score(self, manual_ann, spotlight_ann):
+		"""
+		Own ad hoc measure
+		"""
+		if len(manual_ann) == 0 or len(spotlight_ann) == 0:
+			return 'empty annotation'
 
-	def F1_measure(self, manual_ann, spotlight_ann):
-		"""
-		Calculates F1 measure for an annotation with respect
-		to a certain manual annotation
-		"""
+		# Note: we also remove duplicates!
+		MA = set(manual_ann) 
+		A = set(spotlight_ann)
+
+		return (len(A ^ MA) + 0.0) / len(A)
 		
+
+	def precision_recall(self, manual_ann, spotlight_ann):
+		"""
+		Calculates the precision of the annotation
+		"""
 		if len(manual_ann) == 0 or len(spotlight_ann) == 0:
 			return 'empty annotation'
 
@@ -126,6 +137,22 @@ class AnnotateQuestion():
 		# Always defined when A and MA nonempty
 		precision = tp / (tp + fp)
 		recall = tp / (tp + fn)
+
+		return [precision, recall]
+
+
+	def F1_measure(self, manual_ann, spotlight_ann):
+		"""
+		Calculates F1 measure for an annotation with respect
+		to a certain manual annotation
+		"""
+		
+		if len(manual_ann) == 0 or len(spotlight_ann) == 0:
+			return 'empty annotation'
+
+		precision_recall = self.precision_recall(manual_ann, spotlight_ann)
+		precision = precision_recall[0]
+		recall = precision_recall[1]
 
 		if precision+recall == 0:
 			return 'NaN'
