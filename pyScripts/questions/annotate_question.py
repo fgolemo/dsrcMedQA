@@ -10,10 +10,10 @@ class AnnotateQuestion():
 	# Class variables
 	redirect_list_file = 'redirects_transitive_en.nt.redirectList.p'
 	redirect_dict_file = 'redirects_transitive_en.nt.redirectDict.p'
-	spotlight_uri = 'http://spotlight.sztaki.hu:2222/rest/annotate'
+	spotlight_uri = 'http://dbps.florian.ops.few.vu.nl/rest/annotate'
 	question_part_separator = ' aaaaaaaa '
 
-	def annotate_text(self, text, confidence=0.2, support=20):
+	def annotate_text(self, text, confidence=0.4, support=10):
 		"""
 		Annotates text using DBPedia Spotlight
 		"""
@@ -28,7 +28,7 @@ class AnnotateQuestion():
 		return r.json()
 
 
-	def annotate_question(self, text, mc, confidence=0.2, support=20):
+	def annotate_question(self, text, mc, confidence=0.4, support=10):
 		"""
 		Annotates question and mc's at once using DPpedia Spotlight
 
@@ -174,7 +174,7 @@ class AnnotateQuestion():
 				for q in man_ann_questions:
 					
 					spotlight_ann = self.annotate_question(q['qtext'], q['mc'], confidence, support)
-					spotlight_ann = self.extract_uris(spotlight_ann) # REMOVE FALSE!
+					spotlight_ann = self.extract_uris(spotlight_ann)
 					spotlight_ann = self.flatten(spotlight_ann)
 					manual_ann = q['q_entities'] + self.flatten(q['mc_entities'])
 
@@ -197,6 +197,26 @@ class AnnotateQuestion():
 		Flattens a two dimensional list.
 		"""
 		return [item for subList in myList for item in subList ]
+
+
+	def annotate_question_collection(self, collection, confidence=.4, support=10, progress=True):
+		if progress:
+			p = ProgressBar(len(collection))
+			i = 0
+
+		for q in collection:
+			ann = self.annotate_question(q['q_text'], q['mc_text'], confidence=confidence, support=support)
+			ann = self.extract_uris(ann)
+			q['q_entities'] = ann[0]
+			q['mc_entities'] = ann[1:]
+			
+			if progress:
+				p.animate(i)
+				i += 1
+
+		return collection
+
+
 
 
 	# Old functions
